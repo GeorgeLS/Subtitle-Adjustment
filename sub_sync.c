@@ -41,6 +41,18 @@ int is_timestamp(void) {
   return 0;
 }
 
+int is_id(void) {
+  int flag = 1;
+  char* aux = buffer;
+  while (*aux != '\r' && *aux != '\n') {
+    if (!isdigit(*aux++)) {
+      flag = 0;
+      break;
+    }
+  }
+  return(flag);
+}
+
 void extract_timestamp(void) {
   char* aux = buffer;
   int time = 0;  
@@ -96,11 +108,17 @@ void extract_timestamp(void) {
 
 void modify_timestamp(void) {
   from.hours += user_timestamp.hours;
+  from.hours = (from.hours < 0) ? 0 : from.hours;
   from.minutes += user_timestamp.minutes;
+  from.minutes = (from.minutes < 0) ? 0 : from.minutes;
   from.seconds += user_timestamp.seconds;
+  from.seconds = (from.seconds < 0.0) ? 0.0 : from.seconds;
   to.hours += user_timestamp.hours;
+  to.hours = (to.hours < 0) ? 0 : to.hours;
   to.minutes += user_timestamp.minutes;
+  to.minutes = (to.minutes < 0) ? 0 : to.minutes;
   to.seconds += user_timestamp.seconds;
+  to.seconds = (to.seconds < 0.0) ? 0.0 : to.seconds;
 }
 
 void reset_timestamp(void) {
@@ -161,6 +179,7 @@ int main(int argc, char* argv[]) {
       fprintf(stderr, "Could not open given subtitle file. Abort...\n");
       exit(EXIT_FAILURE);
     }
+    printf("Modifying file: %s\n", argv[i]);
     read_user_timestamp();
     write();
     free(new_sub_name);

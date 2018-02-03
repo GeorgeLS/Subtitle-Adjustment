@@ -3,7 +3,7 @@
  * Filename: sub_sync.c
  * Author: George Liontos
  * Created: Sat Feb  3 04:10:49 2018 (+0200)
-/* This program is free software: you can redistribute it and/or modify
+ * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or (at
  * your option) any later version.
@@ -25,8 +25,8 @@
 
 typedef struct {
   int hours;
-  int seconds;
-  double milliseconds;  
+  int minutes;
+  double seconds;  
 } timestamp_t;
 
 timestamp_t from;
@@ -53,20 +53,20 @@ void extract_timestamp(void) {
   while (*aux != ':') {
     time = (time*10) + *aux++ - '0';    
   }
-  from.seconds = time;
+  from.minutes = time;
   ++aux;
   double dtime = 0.0;  
   while (*aux != ',') {
     dtime = (dtime*10.0) + *aux++ - '0'; 
   }
-  from.milliseconds = dtime;
+  from.seconds = dtime;
   dtime = 0;
   ++aux;
   while (*aux != ' ') {
     dtime = (dtime*10.0) + *aux++ - '0';
   }
   dtime /= 1000.0;
-  from.milliseconds += dtime;
+  from.seconds += dtime;
   time = 0;
   dtime = 0.0;  
   while (!isdigit(*aux)) ++aux;  
@@ -79,42 +79,42 @@ void extract_timestamp(void) {
   while (*aux != ':') {
     time = (time*10) + *aux++ - '0';    
   }
-  to.seconds = time;
+  to.minutes= time;
   ++aux;
   while (*aux != ',') {
     dtime = (dtime*10.0) + *aux++ - '0'; 
   }
-  to.milliseconds = dtime;
+  to.seconds = dtime;
   dtime = 0;
   ++aux;
   while (*aux != '\n' && *aux != '\r') {
     dtime = (dtime*10.0) + *aux++ - '0';
   }
   dtime /= 1000.0;
-  to.milliseconds += dtime;
+  to.seconds += dtime;
 }
 
 void modify_timestamp(void) {
   from.hours += user_timestamp.hours;
+  from.minutes += user_timestamp.minutes;
   from.seconds += user_timestamp.seconds;
-  from.milliseconds += user_timestamp.milliseconds;
   to.hours += user_timestamp.hours;
+  to.minutes += user_timestamp.minutes;
   to.seconds += user_timestamp.seconds;
-  to.milliseconds += user_timestamp.milliseconds;
 }
 
 void reset_timestamp(void) {
   from.hours = to.hours = 0;
-  from.seconds = to.seconds = 0;
-  from.milliseconds = to.milliseconds = 0.0;
+  from.minutes = to.minutes = 0;
+  from.seconds = to.seconds = 0.0;
 }
 
 void update_timestamp_buffer(void) {
   char* old_locale = setlocale(LC_NUMERIC, NULL);
   setlocale(LC_NUMERIC, "de_DE.UTF-8");
   sprintf(buffer, "%02d:%02d:%06.3f --> %02d:%02d:%06.3f\r\n",
-	  from.hours, from.seconds, from.milliseconds,
-	  to.hours, to.seconds, to.milliseconds);
+	  from.hours, from.minutes, from.seconds,
+	  to.hours, to.minutes, to.seconds);
   setlocale(LC_NUMERIC, old_locale);
 }
 
@@ -132,17 +132,17 @@ void write(void) {
 
 void read_user_timestamp(void) {
   int hours;
-  int seconds;
-  double milliseconds;
+  int minutes;
+  double seconds;
   printf("Please enter the number of hours you want to forward/delay: ");
   scanf("%d", &hours);
+  printf("Please enter the number of minutes you want to forward/delay: ");
+  scanf("%d", &minutes);    
   printf("Please enter the number of seconds you want to forward/delay: ");
-  scanf("%d", &seconds);    
-  printf("Please enter the number of milliseconds you want to forward/delay: ");
-  scanf("%lf", &milliseconds);
+  scanf("%lf", &seconds);
   user_timestamp.hours = hours;
+  user_timestamp.minutes = minutes;
   user_timestamp.seconds = seconds;
-  user_timestamp.milliseconds = milliseconds;
 }
 
 int main(int argc, char* argv[]) {

@@ -22,6 +22,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <locale.h>
+#include <limits.h>
 
 typedef struct {
   int hours;
@@ -29,12 +30,30 @@ typedef struct {
   double seconds;  
 } timestamp_t;
 
+typedef enum {
+  ALL, PART,
+  PART_START,
+  PART_END,
+  ERROR
+} segments;
+
 timestamp_t from;
 timestamp_t to;
 timestamp_t user_timestamp;
 FILE* sub_file;
 FILE* new_sub_file;
 char buffer[1024];
+int min_id;
+int max_id; 
+
+int get_decimal() {
+  char* aux = buffer;
+  int decimal = 0;
+  while (isdigit(*aux)) {
+    decimal = (decimal*10) + *aux++ - '0';
+  }
+  return decimal;
+}
 
 int is_timestamp(void) {
   if (strstr(buffer, "-->") != NULL) return 1;
@@ -137,14 +156,56 @@ void update_timestamp_buffer(void) {
 }
 
 void write(void) {
+  int to_modify = 0;
   while (fgets(buffer, sizeof(buffer), sub_file) != NULL) {
-    if (is_timestamp()) {
+    if (is_id()) {
+      int id = get_decimal();
+      if (id >= min_id && id <= max_id) {
+        to_modify = 1;
+      } else to_modify = 0;
+      fprintf(new_sub_file, "%s", buffer);
+      continue;
+    }
+    if (to_modify && is_timestamp()) {
       extract_timestamp();
       modify_timestamp();
       update_timestamp_buffer();
       fprintf(new_sub_file, "%s", buffer);
-      reset_timestamp();      
+      reset_timestamp();
     } else fprintf(new_sub_file, "%s", buffer);
+  }
+}
+
+void read_ids(segments segment) {
+  switch (segment) {
+    case ALL: {
+      min_id = 1;
+      max_id = INT_MAX;
+      break;      
+    }
+    case PART_START: {
+      min_id = 1;
+      printf("Please specify end: ");
+      scanf("%d", &max_id);
+      getchar();
+      break;
+    }    
+    case PART_END: {
+      printf("Please specify start: ");
+      scanf("%d", &min_id);
+      max_id = INT_MAX;
+      getchar();
+      break;
+    }
+    case PART: {
+      printf("Please specify start: ");
+      scanf("%d", &min_id);
+      getchar();
+      printf("Please specifiy end: ");
+      scanf("%d", &max_id);
+      getchar();
+      break;
+    }
   }
 }
 
@@ -152,6 +213,28 @@ void read_user_timestamp(void) {
   int hours;
   int minutes;
   double seconds;
+  char selection[7];
+  segments seg;
+  do {
+    printf("Please enter the segment you want to modify (possible selections are):\n"
+          "all (this modifies all the file)\nstart (this modifies from the start to a specified end)\n"
+          "end (this modifies from a specified start to the end\npart (this modifies from a specified start "
+          "to a specified end\nPlease enter selection here: ");
+    fgets(selection, sizeof(selection), stdin);
+    selection[strlen(selection) - 1] = '\0';
+    if (strncmp(selection, "all", sizeof("all")) == 0) {
+      seg = ALL;
+    } else if (strncmp(selection, "start", sizeof("start")) == 0) {
+      seg = PART_START;
+    } else if (strncmp(selection, "end", sizeof("end")) == 0) {
+      seg = PART_END;
+    } else if (strncmp(selection, "part", sizeof("part")) == 0) {
+      seg = PART;
+    } else {
+      seg = ERROR;
+    }
+  } while (seg == ERROR);
+  read_ids(seg);
   printf("Please enter the number of hours you want to forward/delay: ");
   scanf("%d", &hours);
   printf("Please enter the number of minutes you want to forward/delay: ");
